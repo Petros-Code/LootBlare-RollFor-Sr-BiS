@@ -579,8 +579,8 @@ local function SetItemInfo(frame, itemLinkArg)
   -- Si l'objet est déjà connu dans DBItems, on utilise les infos directement
   local dbItem = DBItems[itemLinkArg]
   if dbItem then
-    frame.icon:SetTexture(dbItem.equipLoc or "Interface\\Icons\\INV_Misc_QuestionMark")
-    frame.iconButton:SetNormalTexture(dbItem.equipLoc or "Interface\\Icons\\INV_Misc_QuestionMark")
+    frame.icon:SetTexture(dbItem.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
+    frame.iconButton:SetNormalTexture(dbItem.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
     frame.name:SetText(GetColoredTextByQuality(dbItem.name, dbItem.quality))
     frame.itemLink = itemLinkArg
     return true
@@ -754,16 +754,17 @@ local function ShowFrame(frame, duration, item)
     end
 
     if not SetItemInfo(itemRollFrame, item) then
+      -- GET_ITEM_INFO_RECEIVED doesn't exist in 1.12 — poll via OnUpdate instead
+      local waitElapsed = 0
       local waitFrame = CreateFrame("Frame")
-      waitFrame:RegisterEvent("GET_ITEM_INFO_RECEIVED")
-      waitFrame:SetScript("OnEvent", function(_, _, receivedItemID)
-        local expectedID = tonumber(item:match("item:(%d+)"))
-        if receivedItemID == expectedID then
-          if SetItemInfo(itemRollFrame, item) then
-            waitFrame:UnregisterAllEvents()
-            waitFrame:SetScript("OnEvent", nil)
-            frame:Show()
-          end
+      waitFrame:SetScript("OnUpdate", function()
+        waitElapsed = waitElapsed + arg1
+        if SetItemInfo(itemRollFrame, item) then
+          waitFrame:SetScript("OnUpdate", nil)
+          frame:Show()
+        elseif waitElapsed > 5 then
+          -- Give up after 5 seconds
+          waitFrame:SetScript("OnUpdate", nil)
         end
       end)
       this:SetScript("OnUpdate", nil)
@@ -865,15 +866,27 @@ end
 
 local function IsSenderMasterLooter(sender)
   local lootMethod, masterLooterPartyID = GetLootMethod()
-  if lootMethod == "master" and masterLooterPartyID then
-    if masterLooterPartyID == 0 then
-      return sender == UnitName("player")
-    else
-      local senderUID = "party" .. masterLooterPartyID
-      local masterLooterName = UnitName(senderUID)
-      return masterLooterName == sender
-    end
+  if lootMethod ~= "master" then return false end
+
+  if masterLooterPartyID == 0 then
+    return sender == UnitName("player")
   end
+
+  -- Check raid roster first (covers all 40 players, not just your subgroup)
+  local numRaid = GetNumRaidMembers()
+  if numRaid > 0 then
+    for i = 1, numRaid do
+      local name, _, _, _, _, _, _, _, _, _, isML = GetRaidRosterInfo(i)
+      if isML and name == sender then return true end
+    end
+    return false
+  end
+
+  -- Fallback for 5-man party
+  if masterLooterPartyID then
+    return UnitName("party" .. masterLooterPartyID) == sender
+  end
+
   return false
 end
 
@@ -929,7 +942,9 @@ local function HandleChatMessage(event, message, sender)
       end
     end
 
-  elseif event == "CHAT_MSG_RAID_WARNING" and sender == masterLooter then
+  elseif event == "CHAT_MSG_RAID_WARNING" and (sender == masterLooter or IsSenderMasterLooter(sender)) then
+    -- Auto-set masterLooter if not known yet (e.g. player joined after ML was established)
+    if masterLooter ~= sender then masterLooter = sender end
     local links = ExtractItemLinksFromMessage(message)
     if tsize(links) == 1 then
       -- interaction with other looting addons
