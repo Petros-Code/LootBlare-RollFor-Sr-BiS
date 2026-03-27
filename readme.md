@@ -46,6 +46,7 @@ Every time the master looter changes, the new master looter announces the roll t
 
 Changelog:
 
+- **2.6**: Add a new feature of BiS Roll : SR > *BiS* > MS > OS > TM
 - **2.5**: Add item database functionality and update version to 2.5
 - **2.4**: Update version to 2.4 and adjust text colors for improved clarity in LootBlare.lua
 - **2.3**: Update version to 2.3 and enhance item name display with truncation and alignment adjustments
@@ -63,6 +64,7 @@ Changelog:
 
 ___
 Contributors:
+* [Blond](https://github.com/Petros-Code/LootBlare-RollFor-Sr-BiS)
 * [Gondoleon](https://github.com/FSuhas/LootBlare-For-RoolFor)
 * [Siventt](https://github.com/Siventt/LootBlare)
 * [SeguisDumble](https://github.com/SeguisDumble)

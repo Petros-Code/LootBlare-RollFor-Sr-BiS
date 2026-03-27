@@ -1,4 +1,3 @@
-local weird_vibes_mode = true
 local srRollMessages = {}
 local bisRollMessages = {}
 local msRollMessages = {}
@@ -218,9 +217,11 @@ end)
 
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("ADDON_LOADED")
-eventFrame:SetScript("OnEvent", function(self, event)
-      LoadSettings()
-      RefreshInputs()
+eventFrame:SetScript("OnEvent", function()
+  if arg1 == "LootBlare" then
+    LoadSettings()
+    RefreshInputs()
+  end
 end)
 
 -- Slash commande
@@ -276,14 +277,13 @@ local function resetRolls()
 end
 
 -- Fonction pour trier les messages de rolls
-local function sortRolls()
-  local function sortRollsByMessageType(rollMessages)
-    table.sort(rollMessages, function(a, b)
-      return a.roll > b.roll
-    end)
-  end
+local function sortRollsByMessageType(rollMessages)
+  table.sort(rollMessages, function(a, b)
+    return a.roll > b.roll
+  end)
+end
 
-  -- Trier chaque type de message de roll
+local function sortRolls()
   sortRollsByMessageType(srRollMessages)
   sortRollsByMessageType(bisRollMessages)
   sortRollsByMessageType(msRollMessages)
@@ -293,11 +293,11 @@ end
 
 -- Fonction pour colorier les messages en fonction de la classe et de la catégorie du roll
 local function colorMsg(message)
-  msg = message.msg
-  class = message.class
-  _,_,_, message_end = string.find(msg, "(%S+)%s+(.+)")
-  classColor = RAID_CLASS_COLORS[class] or "FFFFFFFF" -- Blanc si classe inconnue
-  textColor = DEFAULT_TEXT_COLOR
+  local msg = message.msg
+  local class = message.class
+  local _,_,_, message_end = string.find(msg, "(%S+)%s+(.+)")
+  local classColor = RAID_CLASS_COLORS[class] or "FFFFFFFF" -- Blanc si classe inconnue
+  local textColor = DEFAULT_TEXT_COLOR
 
   if string.find(msg, "-"..srRollCap) then
     textColor = SR_TEXT_COLOR
@@ -311,7 +311,7 @@ local function colorMsg(message)
     textColor = TM_TEXT_COLOR
   end
 
-  colored_msg = "|c" .. classColor .. "" .. message.roller .. "|r |c" .. textColor .. message_end .. "|r"
+  local colored_msg = "|c" .. classColor .. "" .. message.roller .. "|r |c" .. textColor .. message_end .. "|r"
   return colored_msg
 end
 
@@ -321,30 +321,8 @@ local function tsize(t)
   for _ in pairs(t) do
     c = c + 1
   end
-  return c > 0 and c or nil
+  return c
 end
-
--- Fonction pour vérifier l'état d'un item (s'il est déjà récupéré)
-local function CheckItem(link)
-  -- Essayer de récupérer les informations de l'item
-  discover:SetOwner(UIParent, "ANCHOR_PRESERVE")
-  -- discover:SetHyperlink(link)
-
-  -- Vérification si les données de l'item sont déjà récupérées
-  if discoverTextLeft1 and discoverTooltipTextLeft1:IsVisible() then
-    local name = discoverTooltipTextLeft1:GetText()
-    discoverTooltip:Hide()
-
-    -- Si l'item est encore en train d'être récupéré, retourner false
-    if name == (RETRIEVING_ITEM_INFO or "") then
-      return false
-    else
-      return true
-    end
-  end
-  return false
-end
-
 
 -- Fonction pour créer un bouton de fermeture stylisé
 local function CreateCloseButton(frame)
@@ -441,7 +419,7 @@ local function CreateItemRollFrame()
   frame:SetBackdropBorderColor(0.2, 0.2, 0.2)
 
   -- Ombre (si définie ailleurs)
-  if CreateShadow then CreateShadow(frame) end
+  CreateShadow(frame)
 
   -- Déplacement
   frame:SetMovable(true)
@@ -451,7 +429,7 @@ local function CreateItemRollFrame()
   frame:SetScript("OnDragStop", function() frame:StopMovingOrSizing() end)
 
   -- Bouton de fermeture
-  if CreateCloseButton then CreateCloseButton(frame) end
+  CreateCloseButton(frame)
 
   -- Couleurs RGB pour les barres de statut
   local SR_RGB  = {0.898, 0.188, 0.176}  -- Rouge
@@ -461,13 +439,11 @@ local function CreateItemRollFrame()
   local TM_RGB  = {0.0, 1.0, 1.0}        -- Cyan
 
   -- Boutons de roll
-  if CreateActionButton then
-    CreateActionButton(frame, "SR",  "Roll for Soft Reserve", 1, SR_RGB,  function() RandomRoll(1, srRollCap) end)
-    CreateActionButton(frame, "BiS", "Roll for Best in Slot", 2, BIS_RGB, function() RandomRoll(1, bisRollCap) end)
-    CreateActionButton(frame, "MS",  "Roll for Main Spec",    3, MS_RGB,  function() RandomRoll(1, msRollCap) end)
-    CreateActionButton(frame, "OS",  "Roll for Off Spec",     4, OS_RGB,  function() RandomRoll(1, osRollCap) end)
-    CreateActionButton(frame, "TM",  "Roll for Transmog",     5, TM_RGB,  function() RandomRoll(1, tmogRollCap) end)
-  end
+  CreateActionButton(frame, "SR",  "Roll for Soft Reserve", 1, SR_RGB,  function() RandomRoll(1, srRollCap) end)
+  CreateActionButton(frame, "BiS", "Roll for Best in Slot", 2, BIS_RGB, function() RandomRoll(1, bisRollCap) end)
+  CreateActionButton(frame, "MS",  "Roll for Main Spec",    3, MS_RGB,  function() RandomRoll(1, msRollCap) end)
+  CreateActionButton(frame, "OS",  "Roll for Off Spec",     4, OS_RGB,  function() RandomRoll(1, osRollCap) end)
+  CreateActionButton(frame, "TM",  "Roll for Transmog",     5, TM_RGB,  function() RandomRoll(1, tmogRollCap) end)
 
   -- Barre de progression (timer)
   frame.statusBar = CreateFrame("StatusBar", nil, frame)
@@ -662,26 +638,13 @@ local function ShowFrame(frame, duration, item)
     return qualityIndex
   end
 
-  -- Simple table couleur par classe (RGB, sans alpha)
-  local classColors = {
-    ["Warrior"] = "|cFFC79C6E", -- marron/orange clair
-    ["Mage"]    = "|cFF69CCF0", -- bleu clair
-    ["Priest"]  = "|cFFFFFFFF", -- blanc
-    ["Shaman"]  = "|cFF0070DE", -- bleu foncé
-    ["Rogue"]   = "|cFFFFF569", -- jaune clair
-    ["Druid"]   = "|cFFFF7D0A", -- orange
-    ["Hunter"]  = "|cFFABD473", -- vert clair
-    ["Warlock"] = "|cFF9482C9", -- violet
-    ["Paladin"] = "|cFFF58CBA", -- rose
-  }
-
   local qualityIndex = GetItemQualityIndex(item)
   SetShowFrameBorderColor(frame, qualityIndex)
 
   time_elapsed = 0
   item_query = 1.5
   times = 3
-  rollMessages = {}
+  local rollMessages = {}
   isRolling = true
 
   if frame.statusBar then
@@ -773,7 +736,7 @@ local function ShowFrame(frame, duration, item)
 
       local winnerName, winnerRoll, winnerClass = FindWinner()
 
-      local colorCode = classColors[winnerClass] or "|cFFFFFFFF"
+      local colorCode = "|c" .. (RAID_CLASS_COLORS[winnerClass] or "FFFFFFFF")
       local messageToSend
       if winnerName then
         messageToSend = string.format("The winner is %s%s|r with a roll of %d !", 
@@ -790,27 +753,23 @@ local function ShowFrame(frame, duration, item)
       end
     end
 
-    if times > 0 and item_query < 0 and not CheckItem(item) then
-      times = times - 1
-    else
     if not SetItemInfo(itemRollFrame, item) then
-          local waitFrame = CreateFrame("Frame")
-          waitFrame:RegisterEvent("GET_ITEM_INFO_RECEIVED")
-          waitFrame:SetScript("OnEvent", function(_, _, receivedItemID)
-            local expectedID = tonumber(item:match("item:(%d+)"))
-            if receivedItemID == expectedID then
-              if SetItemInfo(itemRollFrame, item) then
-                waitFrame:UnregisterAllEvents()
-                waitFrame:SetScript("OnEvent", nil)
-                frame:Show()
-              end
-            end
-          end)
-          this:SetScript("OnUpdate", nil)
-          this:Hide()
-          return
+      local waitFrame = CreateFrame("Frame")
+      waitFrame:RegisterEvent("GET_ITEM_INFO_RECEIVED")
+      waitFrame:SetScript("OnEvent", function(_, _, receivedItemID)
+        local expectedID = tonumber(item:match("item:(%d+)"))
+        if receivedItemID == expectedID then
+          if SetItemInfo(itemRollFrame, item) then
+            waitFrame:UnregisterAllEvents()
+            waitFrame:SetScript("OnEvent", nil)
+            frame:Show()
+          end
         end
-      end
+      end)
+      this:SetScript("OnUpdate", nil)
+      this:Hide()
+      return
+    end
     end)
   frame:Show()
 end
@@ -882,23 +841,7 @@ local function UpdateTextArea(frame)
       local classColor = "|c" .. classColorHex
 
       local name = string.sub(v.roller, 1, 15)
-      local minRoll = v.min
-      local maxRoll = v.max
-
-      -- Si min ou max manquent, les définir selon le type
-      if not minRoll or not maxRoll then
-        if prioLabel == "SR" or prioLabel == "MS" then
-          minRoll, maxRoll = 1, 100
-        elseif prioLabel == "BIS" then
-          minRoll, maxRoll = 1, bisRollCap
-        elseif prioLabel == "OS" then
-          minRoll, maxRoll = 1, 99
-        elseif prioLabel == "TMOG" then
-          minRoll, maxRoll = 1, 98
-        end
-      end
-
-      local rollText = string.format("%2d (%d-%d)", v.roll, minRoll, maxRoll)
+      local rollText = string.format("%2d (%d-%d)", v.roll, v.min or 1, v.max or 100)
 
       table.insert(leftLines, string.format("%s%s|r", classColor, name))
       table.insert(rightLines, string.format("%s%s|r", prioColors[prioLabel] or "|cFFFFFFFF", rollText))
@@ -960,7 +903,7 @@ local function HandleChatMessage(event, message, sender)
     local _,_, newML = string.find(message, "(%S+) is now the loot master")
     if newML then
       masterLooter = newML
-      playerName = UnitName("player")
+      local playerName = UnitName("player")
       -- if the player is the new master looter, announce the roll time
       if newML == playerName then
         SendAddonMessage(LB_PREFIX, LB_SET_ROLL_TIME .. FrameShownDuration .. " seconds", "RAID")
@@ -970,7 +913,7 @@ local function HandleChatMessage(event, message, sender)
       if roller and roll and rollers[roller] == nil then
         roll = tonumber(roll)
         rollers[roller] = 1
-        message = { roller = roller, roll = roll, msg = message, class = GetClassOfRoller(roller) }
+        message = { roller = roller, roll = roll, msg = message, class = GetClassOfRoller(roller), min = tonumber(minRoll), max = tonumber(maxRoll) }
         if maxRoll == tostring(srRollCap) then
           table.insert(srRollMessages, message)
         elseif maxRoll == tostring(bisRollCap) then
@@ -1061,24 +1004,24 @@ SlashCmdList["ROLLHIST"] = function()
   ShowFrame(itemRollFrame, 15, itemLink)
 
   srRollMessages = {
-    { roller = "Thrall", roll = 40, msg = "Thrall rolls 40 (1-"..srRollCap..")", class = "Shaman" },
-    { roller = "Silvana", roll = 26, msg = "Silvana rolls 26 (1-"..srRollCap..")", class = "Hunter" },
-    { roller = "Guldan", roll = 35, msg = "Guldan rolls 35 (1-"..srRollCap..")", class = "Warlock" }
+    { roller = "Thrall",   roll = 40, msg = "Thrall rolls 40 (1-"..srRollCap..")",   class = "Shaman",  min = 1, max = srRollCap },
+    { roller = "Silvana",  roll = 26, msg = "Silvana rolls 26 (1-"..srRollCap..")",  class = "Hunter",  min = 1, max = srRollCap },
+    { roller = "Guldan",   roll = 35, msg = "Guldan rolls 35 (1-"..srRollCap..")",   class = "Warlock", min = 1, max = srRollCap },
   }
   bisRollMessages = {
-    { roller = "Illidan", roll = 99, msg = "Illidan rolls 99 (1-"..bisRollCap..")", class = "Warlock" },
-    { roller = "Sylvanas", roll = 87, msg = "Sylvanas rolls 87 (1-"..bisRollCap..")", class = "Hunter" }
+    { roller = "Illidan",  roll = 99, msg = "Illidan rolls 99 (1-"..bisRollCap..")", class = "Warlock", min = 1, max = bisRollCap },
+    { roller = "Sylvanas", roll = 87, msg = "Sylvanas rolls 87 (1-"..bisRollCap..")",class = "Hunter",  min = 1, max = bisRollCap },
   }
   msRollMessages = {
-    { roller = "Jaina", roll = 50, msg = "Jaina rolls 50 (1-"..msRollCap..")", class = "Mage" },
-    { roller = "Tyrande", roll = 60, msg = "Tyrande rolls 60 (1-"..msRollCap..")", class = "Druid" }
+    { roller = "Jaina",    roll = 50, msg = "Jaina rolls 50 (1-"..msRollCap..")",    class = "Mage",    min = 1, max = msRollCap },
+    { roller = "Tyrande",  roll = 60, msg = "Tyrande rolls 60 (1-"..msRollCap..")",  class = "Druid",   min = 1, max = msRollCap },
   }
   osRollMessages = {
-    { roller = "Varian", roll = 45, msg = "Varian rolls 45 (1-"..osRollCap..")", class = "Warrior" },
-    { roller = "Kael'thas", roll = 55, msg = "Kael'thas rolls 55 (1-"..osRollCap..")", class = "Paladin" }
+    { roller = "Varian",   roll = 45, msg = "Varian rolls 45 (1-"..osRollCap..")",   class = "Warrior", min = 1, max = osRollCap },
+    { roller = "Kael'thas",roll = 55, msg = "Kael'thas rolls 55 (1-"..osRollCap..")",class = "Paladin", min = 1, max = osRollCap },
   }
   tmogRollMessages = {
-    { roller = "Anduin", roll = 98, msg = "Anduin rolls 98 (1-"..tmogRollCap..")", class = "Paladin" }
+    { roller = "Anduin",   roll = 98, msg = "Anduin rolls 98 (1-"..tmogRollCap..")", class = "Paladin", min = 1, max = tmogRollCap },
   }
 
   UpdateTextArea(itemRollFrame)
