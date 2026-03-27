@@ -1,4 +1,4 @@
-# Loot Blare 2.5
+# Loot Blare 2.6 SR+BiS
 
 Loot Blare is a World of Warcraft addon originally designed **Turtle WoW**.
 
@@ -20,7 +20,8 @@ This addon displays a pop-up frame showing items and rolls when a single uncommo
 
 - **Easy Roll Buttons**: For raiders, the addon provides convenient roll buttons:
 
-  - **SR (Soft Reserve)**: Rolls from 1 to 100.
+  - **SR (Soft Reserve)**: Rolls from 1 to 102.
+  - **BiS (Best in Slot)**: Rolls from 1 to 101.
   - **MS (Main Spec)**: Rolls from 1 to 100.
   - **OS (Off Spec)**: Rolls from 1 to 99.
   - **TM (Transmog)**: Rolls from 1 to 98.
