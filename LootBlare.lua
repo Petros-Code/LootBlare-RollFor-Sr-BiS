@@ -579,8 +579,8 @@ local function SetItemInfo(frame, itemLinkArg)
   -- Si l'objet est déjà connu dans DBItems, on utilise les infos directement
   local dbItem = DBItems[itemLinkArg]
   if dbItem then
-    frame.icon:SetTexture(dbItem.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
-    frame.iconButton:SetNormalTexture(dbItem.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
+    frame.icon:SetTexture(dbItem.equipLoc or "Interface\\Icons\\INV_Misc_QuestionMark")
+    frame.iconButton:SetNormalTexture(dbItem.equipLoc or "Interface\\Icons\\INV_Misc_QuestionMark")
     frame.name:SetText(GetColoredTextByQuality(dbItem.name, dbItem.quality))
     frame.itemLink = itemLinkArg
     return true
